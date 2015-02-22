@@ -1,0 +1,184 @@
+---
+output: word_document
+---
+## Motor Trend Car Road Tests - Effects of transmission on MPG
+
+By Fatima Mouaki
+
+02/22/2015
+
+### Summary
+
+In this project, we will analyze the mtcars data set and explore the relationship between a set of variables and miles per gallon (MPG) which will be our outcome.
+
+The main objectives of this research are as follows:
+
+Is an automatic or manual transmission better for MPG?
+Quantifying how different is the MPG between automatic and manual transmissions?
+
+And the conclusion was:
+
+- Manual transmission is better for MPG compared to automatic transmission.
+- Means for automatic and manual transmission cars are significantly different.
+
+#### Data Processing
+
+The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973-74 models).
+
+A data frame with 32 observations on 11 variables.
+
+- mpg:	Miles/(US) gallon
+- cyl:	Number of cylinders
+- disp:	Displacement (cu.in.)
+- hp:	Gross horsepower
+- drat:	Rear axle ratio
+- wt:	Weight (lb/1000)
+- qsec:	1/4 mile time
+- vs:	V/S
+- am:	Transmission (0 = automatic, 1 = manual)
+- gear:	Number of forward gears
+- carb:	Number of carburetors
+
+
+Load Data
+
+```{r, echo=TRUE}
+data(mtcars)
+str(mtcars)
+```
+
+#### 1. Is an automatic or manual transmission better for MPG?
+
+##### Exploratory data analysis
+
+Now we will explore various relationships between variables of interest. First, we ploted the relationship between all the variables of the mtcars dataset. We learned from this plot that the variables cyl, disp, hp, drat, wt, vs and am have a strong correlation with mpg (Appendix - Figure 1). We will quatify that in a regression model section by fitting a multivariate linear model.
+
+In this analysis, we are interested in the effects of car transmission type on mpg (Appendix - Figure 2). So, we look at the distribution of mpg for each level of am (Automatic or Manual) by plotting box plot. This plot clearly depicts that manual transmissions tend to have higher MPG. This data is further analyzed and discussed in regression analysis section by fitting a linear model.
+
+
+###### T-Test: compare group #1 with am=1 & group #2 with am=0.
+
+H0: mpg of manual is less than mpg of automatic
+HA: mpg of manual is greater than mpg of automatic
+
+```{r, echo=TRUE}
+data(mtcars)
+g1 <- subset(mtcars, mtcars$am==0)
+g2 <- subset(mtcars, mtcars$am==1)
+t.test(g1, g2, alternative="greater", paired=F)
+```
+
+with the p_value of 0.03066 we conclude that mpg for manual cars is siginficantly larger than mpg for automatic cars.
+
+
+#### 2. Quantify the MPG difference between automatic and manual transmissions
+
+######Building the best Model
+
+######Base Model - Simple linear Regression
+
+
+```{r, echo=TRUE}
+data(mtcars)
+mtcars$cyl  <- factor(mtcars$cyl)
+mtcars$vs   <- factor(mtcars$vs)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+mtcars$am   <- factor(mtcars$am,labels=c("Automatic","Manual"))
+fit_base<-lm(mpg~am, data = mtcars)
+summary(fit_base)
+
+```
+
+
+In this model Automatic cars is the reference. To interprete the coefficient and intercept, we say on average automatic cars have 17.147 MPG and manual transmission cars have 7.245 MPGs more. However, we see that the R2 value is 0.3385. This means that our model only explains 33.85% of the outcome variance. This indicates a weak relationship between Transmission type and MPG. 
+
+###### Fitting the model with the variables that have a highest correlation with the outcome. 
+
+```{r, echo=TRUE}
+data(mtcars)
+sort(cor(mtcars)[1,])
+```
+
+wt has the highest correlation. So we let's include it in the model. 
+
+```{r, echo=TRUE}
+data(mtcars)
+mtcars$cyl  <- factor(mtcars$cyl)
+mtcars$vs   <- factor(mtcars$vs)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+mtcars$am   <- factor(mtcars$am,labels=c("Automatic","Manual"))
+mtcars$am <- factor(mtcars$am,labels=c('Automatic','Manual'))
+fit_HCorr<- lm(mpg ~ am+wt, data = mtcars)
+summary(fit_HCorr)
+
+```
+
+
+The model explain only 73.5% of variability. Let's look further for the model that has higher R^2.
+
+######Fitting the model using forward selection and backward elimination
+
+Let's now look at the best model that have the largest percent of varaiability explained, using step method which runs lm multiple times to build multiple regression models and select the best variables from them using both forward selection and backward elimination methods by the AIC algorithm.              
+   
+
+```{r, echo=TRUE}
+data(mtcars)
+mtcars$cyl  <- factor(mtcars$cyl)
+mtcars$vs   <- factor(mtcars$vs)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+mtcars$am   <- factor(mtcars$am,labels=c("Automatic","Manual"))
+lmI <- lm(mpg ~ ., data = mtcars)
+fit_best<-step(lmI, direction = "both",trace=0)
+summary(fit_best) 
+```
+
+The best model obtained shows that variables, cyl, hp and wt as confounders and am as the independent variable. Our Model explain 84.01% of the variability. 
+
+Let's now use ANOVA test to compare the best model obtained with the base model.
+
+
+```{r, echo=TRUE}
+anova(fit_best,fit_base)
+```
+
+In the ANOVA comparison we conclude that the best model is signifinatly different from the base model, and the confounder variables contribute significantly to fit the accuracy of the model.
+
+Before we report the details of our model, it is important to check the residuals for any signs of non-normality and examine the residuals vs. fitted values plot to spot for any signs of heteroskedasticity.
+
+
+We can see (Appendix - Figure.3) that Our residuals are normally distributed and homoskedastic. We can now report the estimates from our final model.
+
+#### Conclusion
+
+- The best fit model explains 84.01% of the variance. 
+- Cars with automatic transmission have in average 33.7 Miles/(US) gallon.
+- mpg will decrease by 2.5 for every 1000 increase in weight.
+- mpg decreases negligibly (only 0.032) with every increase of 10 in hp
+- mpg will decrease by 3.03 and 2.1 if the number of cyl increases from 4 to 6 and 8 (adjusted by hp, wt, and am).
+
+
+
+#### Appendix
+
+Figure 1.
+
+```{r, echo=TRUE}
+pairs(mtcars)
+```
+
+Figure 2.
+
+```{r, echo=TRUE}
+boxplot(mpg ~ am, data = mtcars, col = (c("red","blue")), ylab = "Miles Per Gallon", xlab = "Transmission Type")
+```
+
+Figure 3.
+
+```{r,echo=TRUE}
+par(mfrow = c(2,2))
+plot(fit_best)
+```
+
